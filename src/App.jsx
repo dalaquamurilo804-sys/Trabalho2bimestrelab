@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import AboutUs from './assets/view/about'
+import AboutUs from './views/about'
 
 function App() {
   const [count, setCount] = useState(0)
