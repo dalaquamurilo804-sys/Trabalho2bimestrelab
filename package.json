@@ -7,9 +7,12 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "db:init": "node src/database/statements.cjs init",
+    "db:list": "node src/database/statements.cjs list"
   },
   "dependencies": {
+    "better-sqlite3": "^12.10.0",
     "bootstrap": "^5.3.8",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"
