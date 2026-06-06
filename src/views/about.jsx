@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Header from "../assets/actions/header";
 import Footer from "../assets/actions/footer";
 import '../assets/css/about.css';
@@ -81,6 +82,12 @@ export default function AboutUs() {
   const [selectedGame, setSelectedGame] = useState("Todos");
   const [selectedStyle, setSelectedStyle] = useState("Todos");
   const [glowPos, setGlowPos] = useState({ x: 50, y: 30 });
+
+  const navigate = useNavigate();
+
+  const navAuth = () => {
+    navigate("/auth");
+  }
 
   useEffect(() => {
     let angle = 0;
@@ -232,7 +239,7 @@ export default function AboutUs() {
           <div className="final-cta-content">
             <h2>Pronto para sair da Solo Queue?</h2>
             <p>Crie seu perfil, defina seus critérios e encontre parceiros que elevam seu jogo.</p>
-            <button className="cta-primary" style={{ padding: "16px 40px", fontSize: 16 }}>
+            <button onClick={navAuth} className="cta-primary" style={{ padding: "16px 40px", fontSize: 16 }}>
               Criar conta gratuita ⚡
             </button>
           </div>
