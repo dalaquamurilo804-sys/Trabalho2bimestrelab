@@ -1,12 +1,16 @@
-import { useState } from 'react'
-import AboutUs from './views/about'
+import React from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import AboutUs from "./views/about";
+import AuthScreen from "./views/auth";
 
-function App() {
-  const [count, setCount] = useState(0)
+export default function App() {
 
   return (
-    <AboutUs/>
-  )
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<AboutUs />} />
+        <Route path="/auth" element={<AuthScreen />} />
+      </Routes>
+    </BrowserRouter>
+  );
 }
-
-export default App
