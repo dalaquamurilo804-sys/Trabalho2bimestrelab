@@ -35,5 +35,5 @@ Ao executar `npm run start` no terminal dentro do diretório `/server`, o Node.j
 Abra o terminal do seu sistema operacional, certifique-se de estar na pasta raiz do servidor e digite:
 
 ```bash
-npm start
+npm run start
 ```
