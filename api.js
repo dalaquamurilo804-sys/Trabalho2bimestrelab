@@ -14,6 +14,7 @@ app.use(express.json());
 // =======================================================
 // MÉTODOS GET (LISTAGENS / BUSCAS)
 // =======================================================
+
 // 1. Rota de Login: Verificar credenciais do usuário
 app.post('/api/login', (req, res) => {
     const { email, password } = req.body;
@@ -22,30 +23,46 @@ app.post('/api/login', (req, res) => {
         return res.status(400).json({ status: "erro", mensagem: "Email e senha são obrigatórios." });
     }
 
-    // 1. Busca o usuário pelo e-mail exatamente igual ao digitado
-    const query = `SELECT id, email, password FROM users WHERE email = ?`;
+    // Busca os dados do User E os dados do Profile vinculado
+    const query = `
+        SELECT 
+            u.id, 
+            u.email, 
+            u.password, 
+            p.nickname, 
+            p.avatar_url 
+        FROM users u
+        INNER JOIN profiles p ON u.id = p.user_id
+        WHERE u.email = ?
+    `;
     
     db.get(query, [email], async (err, user) => {
         if (err) {
             return res.status(500).json({ status: "erro", mensagem: err.message });
         }
         
-        // 2. Se o e-mail não existir no banco
+        // Se o usuário não existir
         if (!user) {
             return res.status(401).json({ status: "erro", mensagem: "E-mail ou senha incorretos." });
         }
 
+        // Compara a senha digitada com a senha criptografada do banco
         const passwordMatch = await bcrypt.compare(password, user.password);
 
         if (!passwordMatch) {
             return res.status(401).json({ status: "erro", mensagem: "E-mail ou senha incorretos." });
         }
 
-        // Se passar por todas as etapas, sucesso!
+        // Se deu tudo certo, retorna os dados do usuário E do perfil para o React salvar na sessão
         res.json({ 
             status: "sucesso", 
             mensagem: "Login realizado com sucesso!",
-            user: { id: user.id, email: user.email }
+            user: { 
+                id: user.id, 
+                email: user.email,
+                nickname: user.nickname,
+                avatar_url: user.avatar_url
+            }
         });
     });
 });
