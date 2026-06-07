@@ -10,6 +10,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<AboutUs />} />
         <Route path="/auth" element={<AuthScreen />} />
+        <Route path="/games" element={<h1>Bem-vindo à página de jogos! (Conteúdo em construção)</h1>} />
       </Routes>
     </BrowserRouter>
   );

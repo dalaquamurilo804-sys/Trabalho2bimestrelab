@@ -1,9 +1,8 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "../assets/css/auth.css";
-
-// ─── API PAYLOAD DOCUMENTATION ────────────────────────────────────────────────
-// [Mantido oculto no resumo, mas mantido idêntico no seu arquivo final]
-// ─────────────────────────────────────────────────────────────────────────────
+import { Popup } from "../assets/actions/PopUp.jsx"; 
+import { authService } from "../models/authService.js";
 
 const SCREENS = { LOGIN: "login", REGISTER: "register", RECOVER: "recover" };
 
@@ -129,9 +128,10 @@ function PasswordStrength({ password }) {
 }
 
 // ─── SUBMIT BUTTON ────────────────────────────────────────────────────────────
-function SubmitBtn({ children, loading, onClick }) {
+function SubmitBtn({ children, loading, onClick, type = "button" }) {
   return (
     <button
+      type={type}
       onClick={onClick}
       disabled={loading}
       className="submit-btn"
@@ -143,17 +143,6 @@ function SubmitBtn({ children, loading, onClick }) {
         </>
       ) : children}
     </button>
-  );
-}
-
-// ─── TOAST ────────────────────────────────────────────────────────────────────
-function Toast({ msg, type }) {
-  if (!msg) return null;
-  const bg = type === "success" ? "var(--success)" : type === "error" ? "var(--error)" : "var(--accent)";
-  return (
-    <div className="toast-container" style={{ background: bg }}>
-      {msg}
-    </div>
   );
 }
 
@@ -178,14 +167,15 @@ function Logo() {
   );
 }
 
-// ─── LOGIN ────────────────────────────────────────────────────────────────────
-function LoginScreen({ setScreen }) {
+// ─── LOGIN SCREEN ─────────────────────────────────────────────────────────────
+function LoginScreen({ setScreen, notificar }) {
+  const navigate = useNavigate();
+  
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
-  const [toast, setToast] = useState(null);
 
   function validate() {
     const e = {};
@@ -195,76 +185,81 @@ function LoginScreen({ setScreen }) {
     return e;
   }
 
-  async function handleLogin() {
-    const e = validate();
-    if (Object.keys(e).length) { setErrors(e); return; }
+  async function handleLogin(e) {
+    if (e) e.preventDefault();
+    const validationErrors = validate();
+    if (Object.keys(validationErrors).length) { setErrors(validationErrors); return; }
     setErrors({});
     setLoading(true);
 
-    const payload = { email, password };
-    console.log("[LOGIN] payload →", payload);
-
-    await new Promise(r => setTimeout(r, 1400));
+    const resultado = await authService.login(email, password);
     setLoading(false);
-    setToast({ msg: "Login realizado com sucesso!", type: "success" });
-    setTimeout(() => setToast(null), 3000);
+
+    if (resultado.sucesso) {
+      notificar(resultado.mensagem, "success");
+      
+      // 2. Aguarda 1000ms (1s) e joga o usuário para a página de jogos
+      setTimeout(() => {
+        navigate("/games");
+      }, 1000);
+
+    } else {
+      notificar(resultado.mensagem, "error");
+    }
   }
 
   return (
-    <>
-      <Toast msg={toast?.msg} type={toast?.type} />
-      <AuthCard>
-        <Logo />
-        <h2 className="screen-title">Bem-vindo de volta</h2>
-        <p className="screen-subtitle">Entre na sua conta para continuar.</p>
+    <AuthCard>
+      <Logo />
+      <h2 className="screen-title">Bem-vindo de volta</h2>
+      <p className="screen-subtitle">Entre na sua conta para continuar.</p>
 
-        <div className="form-grid">
-          <Field
-            label="E-mail"
-            icon={<IconMail />}
-            type="email"
-            value={email}
-            onChange={setEmail}
-            placeholder="seu@email.com"
-            error={errors.email}
-          />
-          <Field
-            label="Senha"
-            icon={<IconLock />}
-            type={showPass ? "text" : "password"}
-            value={password}
-            onChange={setPassword}
-            placeholder="••••••••"
-            error={errors.password}
-            rightSlot={
-              <button onClick={() => setShowPass(v => !v)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--icon)", padding: 2 }}>
-                <IconEye off={showPass} />
-              </button>
-            }
-          />
-
-          <div className="text-link-wrapper">
-            <button onClick={() => setScreen(SCREENS.RECOVER)} className="text-link-btn">
-              Esqueci minha senha
+      <form className="form-grid" onSubmit={handleLogin}>
+        <Field
+          label="E-mail"
+          icon={<IconMail />}
+          type="email"
+          value={email}
+          onChange={setEmail}
+          placeholder="seu@email.com"
+          error={errors.email}
+        />
+        <Field
+          label="Senha"
+          icon={<IconLock />}
+          type={showPass ? "text" : "password"}
+          value={password}
+          onChange={setPassword}
+          placeholder="••••••••"
+          error={errors.password}
+          rightSlot={
+            <button type="button" onClick={() => setShowPass(v => !v)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--icon)", padding: 2 }}>
+              <IconEye off={showPass} />
             </button>
-          </div>
+          }
+        />
 
-          <SubmitBtn loading={loading} onClick={handleLogin}>Entrar</SubmitBtn>
+        <div className="text-link-wrapper">
+          <button type="button" onClick={() => setScreen(SCREENS.RECOVER)} className="text-link-btn">
+            Esqueci minha senha
+          </button>
         </div>
 
-        <p className="footer-text">
-          Não tem conta?{" "}
-          <button onClick={() => setScreen(SCREENS.REGISTER)} className="footer-btn">
-            Criar conta
-          </button>
-        </p>
-      </AuthCard>
-    </>
+        <SubmitBtn type="submit" loading={loading}>Entrar</SubmitBtn>
+      </form>
+
+      <p className="footer-text">
+        Não tem conta?{" "}
+        <button type="button" onClick={() => setScreen(SCREENS.REGISTER)} className="footer-btn">
+          Criar conta
+        </button>
+      </p>
+    </AuthCard>
   );
 }
 
-// REGISTER
-function RegisterScreen({ setScreen }) {
+// ─── REGISTER SCREEN ──────────────────────────────────────────────────────────
+function RegisterScreen({ setScreen, notificar }) {
   const [email, setEmail] = useState("");
   const [nickname, setNickname] = useState("");
   const [password, setPassword] = useState("");
@@ -273,7 +268,6 @@ function RegisterScreen({ setScreen }) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
-  const [toast, setToast] = useState(null);
   const [agreed, setAgreed] = useState(false);
 
   function validate() {
@@ -289,113 +283,115 @@ function RegisterScreen({ setScreen }) {
     return e;
   }
 
-  async function handleRegister() {
-    const e = validate();
-    if (Object.keys(e).length) { setErrors(e); return; }
+  async function handleRegister(e) {
+    if (e) e.preventDefault();
+    const validationErrors = validate();
+    if (Object.keys(validationErrors).length) { setErrors(validationErrors); return; }
     setErrors({});
     setLoading(true);
-    const payload = { email, password, nickname: nickname.trim() };
-    console.log("[REGISTER] payload →", payload);
 
-    await new Promise(r => setTimeout(r, 1600));
+    const resultado = await authService.register(email, password, nickname);
+
     setLoading(false);
-    setToast({ msg: "Conta criada! Bem-vindo ao Matchup 🎮", type: "success" });
-    setTimeout(() => { setToast(null); setScreen(SCREENS.LOGIN); }, 2500);
+
+    if (resultado.sucesso) {
+      notificar(resultado.mensagem, "success");
+      setScreen(SCREENS.LOGIN);
+    } else {
+      notificar(resultado.mensagem, "error");
+    }
   }
 
   return (
-    <>
-      <Toast msg={toast?.msg} type={toast?.type} />
-      <AuthCard>
-        <Logo />
-        <h2 className="screen-title">Criar conta</h2>
-        <p className="screen-subtitle">Registre-se e encontre seu time ideal.</p>
+    <AuthCard>
+      <Logo />
+      <h2 className="screen-title">Criar conta</h2>
+      <p className="screen-subtitle">Registre-se e encontre seu time ideal.</p>
 
-        <div className="form-grid-register">
+      <form className="form-grid-register" onSubmit={handleRegister}>
+        <Field
+          label="Nickname"
+          icon={<IconUser />}
+          value={nickname}
+          onChange={setNickname}
+          placeholder="SeuNickGamer"
+          error={errors.nickname}
+          hint="Será exibido para outros jogadores (máx. 50 caracteres)"
+        />
+        <Field
+          label="E-mail"
+          icon={<IconMail />}
+          type="email"
+          value={email}
+          onChange={setEmail}
+          placeholder="seu@email.com"
+          error={errors.email}
+        />
+        <div>
           <Field
-            label="Nickname"
-            icon={<IconUser />}
-            value={nickname}
-            onChange={setNickname}
-            placeholder="SeuNickGamer"
-            error={errors.nickname}
-            hint="Será exibido para outros jogadores (máx. 50 caracteres)"
-          />
-          <Field
-            label="E-mail"
-            icon={<IconMail />}
-            type="email"
-            value={email}
-            onChange={setEmail}
-            placeholder="seu@email.com"
-            error={errors.email}
-          />
-          <div>
-            <Field
-              label="Senha"
-              icon={<IconLock />}
-              type={showPass ? "text" : "password"}
-              value={password}
-              onChange={setPassword}
-              placeholder="Mínimo 8 caracteres"
-              error={errors.password}
-              rightSlot={
-                <button onClick={() => setShowPass(v => !v)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--icon)", padding: 2 }}>
-                  <IconEye off={showPass} />
-                </button>
-              }
-            />
-            <PasswordStrength password={password} />
-          </div>
-          <Field
-            label="Confirmar senha"
+            label="Senha"
             icon={<IconLock />}
-            type={showConfirm ? "text" : "password"}
-            value={confirm}
-            onChange={setConfirm}
-            placeholder="Repita a senha"
-            error={errors.confirm}
+            type={showPass ? "text" : "password"}
+            value={password}
+            onChange={setPassword}
+            placeholder="Mínimo 8 caracteres"
+            error={errors.password}
             rightSlot={
-              <button onClick={() => setShowConfirm(v => !v)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--icon)", padding: 2 }}>
-                <IconEye off={showConfirm} />
+              <button type="button" onClick={() => setShowPass(v => !v)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--icon)", padding: 2 }}>
+                <IconEye off={showPass} />
               </button>
             }
           />
-
-          <label className="terms-label">
-            <div
-              onClick={() => setAgreed(v => !v)}
-              className={`terms-checkbox ${agreed ? "agreed" : ""} ${errors.agreed ? "error-state" : ""}`}
-            >
-              {agreed && (
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-              )}
-            </div>
-            <span className="terms-text">
-              Concordo com os <span className="terms-highlight">Termos de Uso</span> e a{" "}
-              <span className="terms-highlight">Política de Privacidade</span>
-            </span>
-          </label>
-          {errors.agreed && <span className="field-error-msg" style={{ marginTop: -8 }}>{errors.agreed}</span>}
-
-          <SubmitBtn loading={loading} onClick={handleRegister}>Criar conta gratuita</SubmitBtn>
+          <PasswordStrength password={password} />
         </div>
+        <Field
+          label="Confirmar senha"
+          icon={<IconLock />}
+          type={showConfirm ? "text" : "password"}
+          value={confirm}
+          onChange={setConfirm}
+          placeholder="Repita a senha"
+          error={errors.confirm}
+          rightSlot={
+            <button type="button" onClick={() => setShowConfirm(v => !v)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--icon)", padding: 2 }}>
+              <IconEye off={showConfirm} />
+            </button>
+          }
+        />
 
-        <p className="footer-text">
-          Já tem conta?{" "}
-          <button onClick={() => setScreen(SCREENS.LOGIN)} className="footer-btn">
-            Entrar
-          </button>
-        </p>
-      </AuthCard>
-    </>
+        <label className="terms-label">
+          <div
+            onClick={() => setAgreed(v => !v)}
+            className={`terms-checkbox ${agreed ? "agreed" : ""} ${errors.agreed ? "error-state" : ""}`}
+          >
+            {agreed && (
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            )}
+          </div>
+          <span className="terms-text">
+            Concordo com os <span className="terms-highlight">Termos de Uso</span> e a{" "}
+            <span className="terms-highlight">Política de Privacidade</span>
+          </span>
+        </label>
+        {errors.agreed && <span className="field-error-msg" style={{ marginTop: -8 }}>{errors.agreed}</span>}
+
+        <SubmitBtn type="submit" loading={loading}>Criar conta gratuita</SubmitBtn>
+      </form>
+
+      <p className="footer-text">
+        Já tem conta?{" "}
+        <button type="button" onClick={() => setScreen(SCREENS.LOGIN)} className="footer-btn">
+          Entrar
+        </button>
+      </p>
+    </AuthCard>
   );
 }
 
-// RECOVER
-function RecoverScreen({ setScreen }) {
+// ─── RECOVER SCREEN ──────────────────────────────────────────────────────────
+function RecoverScreen({ setScreen, notificar }) {
   const [email, setEmail] = useState("");
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
@@ -408,18 +404,22 @@ function RecoverScreen({ setScreen }) {
     return e;
   }
 
-  async function handleRecover() {
-    const e = validate();
-    if (Object.keys(e).length) { setErrors(e); return; }
+  async function handleRecover(e) {
+    if (e) e.preventDefault();
+    const validationErrors = validate();
+    if (Object.keys(validationErrors).length) { setErrors(validationErrors); return; }
     setErrors({});
     setLoading(true);
 
-    const payload = { email };
-    console.log("[FORGOT-PASSWORD] payload →", payload);
-
-    await new Promise(r => setTimeout(r, 1400));
+    const resultado = await authService.recoverPassword(email);
     setLoading(false);
-    setSent(true);
+
+    if (resultado.sucesso) {
+      notificar(resultado.mensagem, "success");
+      setSent(true);
+    } else {
+      notificar(resultado.mensagem, "error");
+    }
   }
 
   return (
@@ -427,14 +427,14 @@ function RecoverScreen({ setScreen }) {
       <Logo />
       {!sent ? (
         <>
-          <button onClick={() => setScreen(SCREENS.LOGIN)} className="back-btn">
+          <button type="button" onClick={() => setScreen(SCREENS.LOGIN)} className="back-btn">
             <IconArrow /> Voltar para login
           </button>
           <h2 className="screen-title">Recuperar senha</h2>
           <p className="screen-subtitle" style={{ lineHeight: 1.6 }}>
             Informe seu e-mail de cadastro. Enviaremos um link para redefinir sua senha.
           </p>
-          <div className="form-grid">
+          <form className="form-grid" onSubmit={handleRecover}>
             <Field
               label="E-mail cadastrado"
               icon={<IconMail />}
@@ -444,8 +444,8 @@ function RecoverScreen({ setScreen }) {
               placeholder="seu@email.com"
               error={errors.email}
             />
-            <SubmitBtn loading={loading} onClick={handleRecover}>Enviar link de recuperação</SubmitBtn>
-          </div>
+            <SubmitBtn type="submit" loading={loading}>Enviar link de recuperação</SubmitBtn>
+          </form>
         </>
       ) : (
         <div className="success-state-container">
@@ -457,7 +457,7 @@ function RecoverScreen({ setScreen }) {
           <p className="success-subtext">
             Não encontrou? Verifique a caixa de spam.
           </p>
-          <button onClick={() => setScreen(SCREENS.LOGIN)} className="outline-btn">
+          <button type="button" onClick={() => setScreen(SCREENS.LOGIN)} className="outline-btn">
             Voltar ao login
           </button>
         </div>
@@ -466,12 +466,35 @@ function RecoverScreen({ setScreen }) {
   );
 }
 
-// ROOT
+// ─── ROOT COMPONENT ──────────────────────────────────────────────────────────
 export default function AuthScreens() {
   const [screen, setScreen] = useState(SCREENS.LOGIN);
 
+  // Controle de estado centralizado para o componente Popup separado
+  const [popupConfig, setPopupConfig] = useState({
+    isOpen: false,
+    message: "",
+    type: "info",
+  });
+
+  const notificar = (message, type = "info") => {
+    setPopupConfig({ isOpen: true, message, type });
+  };
+
+  const fecharPopup = () => {
+    setPopupConfig(prev => ({ ...prev, isOpen: false }));
+  };
+
   return (
     <div className="main-layout">
+      {/* Componente flutuante global de Pop-up */}
+      <Popup 
+        isOpen={popupConfig.isOpen}
+        message={popupConfig.message}
+        type={popupConfig.type}
+        onClose={fecharPopup}
+      />
+
       {/* Background FX Layer */}
       <div className="bg-fx-layer">
         <div className="bg-blur-top" />
@@ -552,9 +575,9 @@ export default function AuthScreens() {
 
       {/* Right panel — forms */}
       <div className="right-panel">
-        {screen === SCREENS.LOGIN && <LoginScreen setScreen={setScreen} />}
-        {screen === SCREENS.REGISTER && <RegisterScreen setScreen={setScreen} />}
-        {screen === SCREENS.RECOVER && <RecoverScreen setScreen={setScreen} />}
+        {screen === SCREENS.LOGIN && <LoginScreen setScreen={setScreen} notificar={notificar} />}
+        {screen === SCREENS.REGISTER && <RegisterScreen setScreen={setScreen} notificar={notificar} />}
+        {screen === SCREENS.RECOVER && <RecoverScreen setScreen={setScreen} notificar={notificar} />}
       </div>
     </div>
   );
